@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  background: #0b1020;
+  color: white;
+  text-align: center;
+  font-family: sans-serif;
+}
+button {
+  font-size: 18px;
+  padding: 15px;
+  margin: 5px;
+  width: 90%;
+}
+#enemy {
+  margin: 20px;
+  padding: 20px;
+  border: 2px solid red;
+}
+</style>
+</head>
+<body>
+
+<h2>Magie Arena</h2>
+
+<div id="enemy">
+  🏰 Feindlicher Turm<br>
+  Leben: <span id="hp">100</span>
+</div>
+
+<button onclick="cast(15)">🔥 Feuerball</button>
+<button onclick="cast(10)">⚡ Blitz</button>
+<button onclick="cast(5)">❄️ Frost</button>
+
+<script>
+let hp = 100;
+
+function cast(dmg) {
+  hp -= dmg;
+  if (hp < 0) hp = 0;
+  document.getElementById("hp").innerText = hp;
+  if (hp === 0) {
+    alert("🏆 Sieg!");
+    hp = 100;
+  }
+}
+</script>
+
+</body>
+</html>
