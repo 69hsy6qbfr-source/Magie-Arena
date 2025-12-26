@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Wizard Arena</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: black;
+  font-family: system-ui;
+  overflow: hidden;
+}
+
+/* ===== GAME ===== */
+#game {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== ARENA BACKGROUND ===== */
+#battlefield {
+  position: absolute;
+  inset: 0;
+  background-image: url("arena.jpg");
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+}
+
+/* ===== HP ===== */
+.hp-bar {
+  position: absolute;
+  left: 10%;
+  width: 80%;
+  height: 14px;
+  background: rgba(0,0,0,.6);
+  border-radius: 10px;
+  z-index: 10;
+}
+.hp-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#ff6b6b,#b00000);
+  border-radius: 10px;
+}
+#enemyHP { top: 15px; }
+#playerHP { bottom: 150px; }
+
+/* ===== FIELD ===== */
+#field {
+  position: absolute;
+  top: 50px;
+  bottom: 190px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+}
+
+/* ===== LANES ===== */
+.lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#laneLeft  { transform: translateX(-120%); }
+#laneRight { transform: translateX(20%); }
+
+/* ===== UNITS ===== */
+.unit {
+  position: absolute;
+  font-size: 34px;
+  pointer-events: none;
+}
+
+/* ===== MANA ===== */
+#mana {
+  position: absolute;
+  bottom: 160px;
+  left: 10%;
+  width: 80%;
+  height: 12px;
+  background: rgba(0,0,0,.6);
+  border-radius: 8px;
+  z-index: 10;
+}
+#manaFill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg,#a58bff,#6a5cff);
+  border-radius: 8px;
+}
+
+/* ===== HAND ===== */
+#hand {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  z-index: 20;
+}
+.card {
+  width: 88px;
+  height: 120px;
+  background: linear-gradient(#2e315c,#1c1f3e);
+  border-radius: 14px;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 10px 20px rgba(0,0,0,.6);
+  user-select: none;
+}
+.card span {
+  display: block;
+  font-size: 34px;
+  margin-top: 12px;
+}
+
+/* ===== DRAG ===== */
+.dragging {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  transform: scale(1.15);
+}
+</style>
+</head>
+
+<body>
+<div id="game">
+
+  <div id="battlefield"></div>
+
+  <div id="enemyHP" class="hp-bar"><div class="hp-fill"></div></div>
+  <div id="playerHP" class="hp-bar"><div class="hp-fill"></div></div>
+
+  <div id="field">
+    <div id="laneLeft" class="lane"></div>
+    <div id="laneRight" class="lane"></div>
+  </div>
+
+  <div id="mana"><div id="manaFill"></div></div>
+
+  <div id="hand">
+    <div class="card"><span>🦡</span>Niffler</div>
+    <div class="card"><span>🦅</span>Hippogreif</div>
+    <div class="card"><span>🐴</span>Thestral</div>
+    <div class="card"><span>🦌</span>Patronus</div>
+  </div>
+
+</div>
+
+<script>
+let mana = 10, maxMana = 10;
+let dragging = null;
+const units = [];
+
+/* ===== MANA ===== */
+function updateMana() {
+  document.getElementById("manaFill").style.width =
+    (mana / maxMana * 100) + "%";
+}
+updateMana();
+
+setInterval(() => {
+  if (mana < maxMana) {
+    mana += 0.02;
+    updateMana();
+  }
+}, 30);
+
+/* ===== DRAG ===== */
+document.querySelectorAll(".card").forEach(card => {
+  card.addEventListener("touchstart", startDrag, {passive:false});
+});
+
+function startDrag(e) {
+  e.preventDefault();
+  dragging = e.currentTarget.cloneNode(true);
+  dragging.classList.add("dragging");
+  document.body.appendChild(dragging);
+  moveDrag(e);
+  document.addEventListener("touchmove", moveDrag, {passive:false});
+  document.addEventListener("touchend", endDrag);
+}
+
+function moveDrag(e) {
+  if (!dragging) return;
+  const t = e.touches[0];
+  dragging.style.left = (t.clientX - 44) + "px";
+  dragging.style.top  = (t.clientY - 60) + "px";
+}
+
+function endDrag(e) {
+  if (!dragging) return;
+
+  const field = document.getElementById("field").getBoundingClientRect();
+  const t = e.changedTouches[0];
+
+  if (t.clientY > field.top + field.height / 2 &&
+      t.clientY < field.bottom &&
+      mana >= 2) {
+
+    spawnUnit(t.clientX, t.clientY - field.top);
+    mana -= 2;
+    updateMana();
+  }
+
+  dragging.remove();
+  dragging = null;
+  document.removeEventListener("touchmove", moveDrag);
+  document.removeEventListener("touchend", endDrag);
+}
+
+/* ===== SPAWN & MOVE ===== */
+function spawnUnit(x, y) {
+  const field = document.getElementById("field").getBoundingClientRect();
+  const laneX = x < field.width / 2 ? field.width * 0.32 : field.width * 0.68;
+
+  const el = document.createElement("div");
+  el.className = "unit";
+  el.innerText = "✨";
+  document.getElementById("field").appendChild(el);
+
+  const unit = { el, x: laneX, y: y + 20, speed: 0.6 };
+  el.style.left = (unit.x - 16) + "px";
+  el.style.top  = unit.y + "px";
+  units.push(unit);
+}
+
+function gameLoop() {
+  units.forEach(u => {
+    u.y -= u.speed;
+    u.el.style.top = u.y + "px";
+  });
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+</script>
+
+</body>
+</html>
